@@ -1,8 +1,9 @@
+use rayon::prelude::*;
+use std::collections::VecDeque;
 use std::{
     cmp::{max, min},
     f32,
 };
-use std::collections::VecDeque;
 
 #[test]
 fn unit() {
@@ -32,12 +33,15 @@ struct Cosine {
 
 impl Graph {
     fn new(n: usize) -> Graph {
-        let mut adj_list = Vec::with_capacity(n);
-        let mut vectors = Vec::with_capacity(n);
-        for _ in 0..n {
-            adj_list.push(Vec::new());
-            vectors.push(Vec::<f32>::new());
-        }
+        let adj_list: Vec<Vec<usize>> = (0..n)
+        .into_par_iter()
+        .map(|_| Vec::new())
+        .collect();
+
+    let vectors: Vec<Vec<f32>> = (0..n)
+        .into_par_iter()
+        .map(|_| Vec::new())
+        .collect();
         return Graph { adj_list, vectors };
     }
 
@@ -56,6 +60,9 @@ impl Graph {
         }
     }
 
+    // Write thread safe ques , use parallel but not rayon needed here 
+    // Parallel opreations using ques is tricky 
+    
     fn bfs_traversal(&self, s: usize) {
         let mut que: VecDeque<usize> = VecDeque::new();
         let mut vist: Vec<bool> = vec![false; self.adj_list.len()];
@@ -71,7 +78,7 @@ impl Graph {
                 }
             }
         }
-    }  
+    }
     // show the traversal logic properly here last time it was not visible
 
     fn distance(vec1: &[f32], vec2: &[f32]) -> f32 {
@@ -83,26 +90,24 @@ impl Graph {
             // vec1.resize(len, 0.0);
             // vec2.resize(len, 0.0);
         }
-        for i in 0..vec1.len() {
-            let diff = vec1[i] - vec2[i];
-            sum = sum + diff * diff;
-        }
+        sum += vec1
+            .par_iter()
+            .zip(vec2.par_iter())
+            .map(|(x, y)| (x - y).powi(2))
+            .sum::<f32>();
         return sum.sqrt();
     }
 
     fn modulus(vec1: &[f32]) -> f32 {
         let mut sum: f32 = 0.0;
-        for i in 0..vec1.len() {
-            let diff = vec1[i];
-            sum = sum + diff * diff;
-        }
+        sum += vec1.par_iter().map(|i| i * i).sum::<f32>();
         return sum.sqrt();
     }
 
     fn brute_force_search(&self, query: &[f32]) -> &Vec<f32> {
         let (best_vec, min_dist) = self
             .vectors
-            .iter()
+            .par_iter()
             .map(|v| (v, Graph::distance(v, query)))
             .min_by(|(_, a), (_, b)| a.total_cmp(b))
             .unwrap();
@@ -116,9 +121,11 @@ impl Graph {
         let mut dot_sum: f32 = 0.0;
         // Dot product
         if vec1.len() == vec2.len() {
-            for i in 0..vec1.len() {
-                dot_sum = dot_sum + (vec1[i] * vec2[i]);
-            }
+            dot_sum += vec1
+                .par_iter()
+                .zip(vec2.par_iter())
+                .map(|(x, y)| x * y)
+                .sum::<f32>();
         }
 
         let a: f32 = Graph::modulus(vec1);
