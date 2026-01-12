@@ -1,5 +1,8 @@
+#[warn(unused)]
+// #[warn(dead_code)]
 use rayon::prelude::*;
 use std::cmp::Ordering;
+
 
 #[derive(Debug)]
 pub struct Graph {
@@ -7,8 +10,8 @@ pub struct Graph {
     vectors: Vec<Vec<f32>>,
 }
 
-
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 struct ScoredNode {
     id: usize,
     score: f32,
@@ -34,7 +37,7 @@ impl Ord for ScoredNode {
 impl Graph {
     pub fn new(n: usize, dim: usize) -> Graph {
         // Initialize with random vectors for demo purposes
-        let mut rng = rand::rng();
+        // let mut _rng = rand::rng();
         let vectors: Vec<Vec<f32>> = (0..n)
             .map(|_| (0..dim).map(|_| rand::random::<f32>()).collect())
             .collect();
@@ -47,7 +50,7 @@ impl Graph {
 
     // Will add edge between nodes 
     pub fn add_edge(&mut self, u: usize, v: usize, d: bool) {
-        
+
         if d {
             self.adj_list[u].push(v);
             
