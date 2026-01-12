@@ -1,9 +1,10 @@
 use core::f32;
+use rand::prelude::*;
+use rand::rng;
 use rayon::prelude::*;
 use std::cmp::{max, min};
 use std::collections::VecDeque;
 use std::usize;
-
 #[test]
 fn unit() {
     // Handle test cases properly error are there
@@ -111,22 +112,19 @@ impl Graph {
 
     fn greedy_search(&self, query: &[f32]) -> &[f32] {
         let mut bestVector = Vec::<f32>::new();
-        let mut randNode: usize = 42; // add the rand usize funtion
+        let mut randNode: usize = rand::random_range(0u8..u8::MAX).into();
         let mut minDist: f32 = Graph::distance(&self.vectors[randNode], query);
-        
+
         while true {
-            if Graph::distance(
-                &self.vectors[*self.get_close_neighbour(randNode, query)], // Closet Node 
-                query, // query vector 
-            ) < minDist
-            {
-                minDist = Graph::distance(
-                &self.vectors[*self.get_close_neighbour(randNode, query)], // Closet Node 
-                query, // query vector 
+            let mut current = Graph::distance(
+                &self.vectors[*self.get_close_neighbour(randNode, query)], // Closet Node
+                query,                                                     // query vector
             );
 
-            randNode = *self.get_close_neighbour(randNode, query);
+            if current < minDist {
+                minDist = current; // query vector 
 
+                randNode = *self.get_close_neighbour(randNode, query);
             } else {
                 return &self.vectors[randNode];
             }
