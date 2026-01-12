@@ -109,9 +109,9 @@ impl Graph {
         best_vec
     }
 
-    fn greedy_search(&self, query: &[f32]) -> Option<Vec<f32>> {
+    fn greedy_search(&self, query: &[f32]) -> &[f32] {
         let mut bestVector = Vec::<f32>::new();
-        let randNode: usize = 42; // add the rand usize funtion
+        let mut randNode: usize = 42; // add the rand usize funtion
         let mut minDist: f32 = Graph::distance(&self.vectors[randNode], query);
         
         while true {
@@ -124,7 +124,11 @@ impl Graph {
                 &self.vectors[*self.get_close_neighbour(randNode, query)], // Closet Node 
                 query, // query vector 
             );
-            
+
+            randNode = *self.get_close_neighbour(randNode, query);
+
+            } else {
+                return &self.vectors[randNode];
             }
         }
 
