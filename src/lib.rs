@@ -5,42 +5,20 @@ use std::cmp::Ordering;
 
 // const N
 
-pub struct Layer {
-    // Layer Zero is Graph itself
-    // This struct is for i th layer
-    graph: Graph,
-    a: usize,
-    b: f32,
-    c: f32,
-    prev_node_id: Vec<usize>,
-    // this node id is for (n-1)th layers node id if this layer is n
-}
 pub struct HNSW {
-    Layers: Vec<Layer>,
-}
+    layers: Vec<Vec<Vec<usize>>>,
 
-impl Layer {
-    fn link(&self, layer_n_1: Layer, n: usize) {
-        let random_nodes: Vec<usize> = (0..n)
-            .into_iter()
-            .map(|_| rand::random_range(0..layer_n_1.graph.adj_list.len()))
-            .collect();
-
-        // Build Connections in random nodes 
-        // What is the logic behind this connections ??? 
-
-        // let graph = Graph {
-        //     adj_list: random_nodes,
-        //     vectors:
-        // };
-
-
-        todo!()
-    }
 }
 
 impl HNSW {
-    fn search(query: &[f32]) -> Vec<f32>{
+    pub fn insert(&mut self, q: &[f32], m: usize, m_max: usize, efConstruction: usize , m_l: f32){
+        
+        // update hnsw inserting element q
+        todo!()
+    }
+
+    pub fn search_layer(q: &[f32], ep: Vec<usize>, ef: usize, lc: usize) -> Vec<usize> {
+        //  ef: Vec<usize> = [node_ids] closest neighbors to q
         todo!()
     }
 }
