@@ -3,6 +3,47 @@
 use rayon::prelude::*;
 use std::cmp::Ordering;
 
+// const N
+
+pub struct Layer {
+    // Layer Zero is Graph itself
+    // This struct is for i th layer
+    graph: Graph,
+    a: usize,
+    b: f32,
+    c: f32,
+    prev_node_id: Vec<usize>,
+    // this node id is for (n-1)th layers node id if this layer is n
+}
+pub struct HNSW {
+    Layers: Vec<Layer>,
+}
+
+impl Layer {
+    fn link(&self, layer_n_1: Layer, n: usize) {
+        let random_nodes: Vec<usize> = (0..n)
+            .into_iter()
+            .map(|_| rand::random_range(0..layer_n_1.graph.adj_list.len()))
+            .collect();
+
+        // Build Connections in random nodes 
+        // What is the logic behind this connections ??? 
+
+        // let graph = Graph {
+        //     adj_list: random_nodes,
+        //     vectors:
+        // };
+
+
+        todo!()
+    }
+}
+
+impl HNSW {
+    fn search(query: &[f32]) -> Vec<f32>{
+        todo!()
+    }
+}
 
 #[derive(Debug)]
 pub struct Graph {
@@ -41,32 +82,40 @@ impl Graph {
         let vectors: Vec<Vec<f32>> = (0..n)
             .map(|_| (0..dim).map(|_| rand::random::<f32>()).collect())
             .collect();
-        
+
         Graph {
             adj_list: vec![Vec::new(); n],
             vectors,
         }
     }
 
-    // Will add edge between nodes 
+    // Will add edge between nodes
     pub fn add_edge(&mut self, u: usize, v: usize, d: bool) {
-
         if d {
             self.adj_list[u].push(v);
-            
         } else {
             self.adj_list[u].push(v);
             self.adj_list[v].push(u);
-            
         }
         // println!("{} --> {}", u, v);
     }
-    
+
+    pub fn insert_hnsw(&mut self, u: usize, v: usize) {
+        // Step1 Find the actual nearest neighobours
+        // let nearest_n =
+        // add edge between them
+        // What about NAvigable > HNSW ??
+    }
+
     pub fn distance(vec1: &[f32], vec2: &[f32]) -> f32 {
         if vec1.len() != vec2.len() {
-            panic!("Vector dimension mismatch: {} vs {}", vec1.len(), vec2.len());
+            panic!(
+                "Vector dimension mismatch: {} vs {}",
+                vec1.len(),
+                vec2.len()
+            );
         }
-        
+
         vec1.iter()
             .zip(vec2.iter())
             .map(|(a, b)| (a - b).powi(2))
@@ -84,7 +133,9 @@ impl Graph {
     }
 
     pub fn greedy_search(&self, query: &[f32]) -> Option<usize> {
-        if self.vectors.is_empty() { return None; }
+        if self.vectors.is_empty() {
+            return None;
+        }
 
         let mut current_node = rand::random_range(0..self.vectors.len());
         let mut min_dist = Graph::distance(&self.vectors[current_node], query);
@@ -92,7 +143,7 @@ impl Graph {
         // Simple Greedy Descent
         loop {
             let mut best_neighbor = None;
-            
+
             // Check all neighbors of current node
             for &neighbor in &self.adj_list[current_node] {
                 let d = Graph::distance(&self.vectors[neighbor], query);
@@ -107,7 +158,7 @@ impl Graph {
                 None => break,
             }
         }
-        
+
         Some(current_node)
     }
 }
