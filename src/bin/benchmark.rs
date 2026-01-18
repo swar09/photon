@@ -4,7 +4,7 @@ use nano_rag::Graph;
 use std::time::{Duration, Instant};
 
 const DIM: usize = 1536;
-const N_VECTORS: usize = 1_000;
+const N_VECTORS: usize = 1_000_000;
 const N_QUERIES: usize = 100;
 
 fn main() {
