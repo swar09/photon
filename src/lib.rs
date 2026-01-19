@@ -3,6 +3,7 @@ use ordered_float::OrderedFloat;
 // #[warn(dead_code)]
 use rayon::prelude::*;
 use rayon::vec;
+use std::arch::naked_asm;
 use std::cmp::{Ordering, min};
 
 use rand::Rng;
@@ -115,34 +116,10 @@ pub struct HNSW {
 }
 
 impl HNSW {
-    pub fn insert(&mut self, q: &[f32], m: usize, m_max: usize, efConstruction: usize, m_l: f32) {
-        let mut w: BinaryHeap<Reverse<(OrderedFloat<f32>, usize)>> = BinaryHeap::new();
-        let mut ep = self.entry_point.unwrap();
-        let top_layer = self.layers.upper_layers.len();
-        let u: f32 = rand::random();
-        let level = (- (1.0 - u).ln() * m_l).floor() as usize; // Level by decay function 
-
-        for lc in 0..level {
-            
-            let vec = HNSW::search_layer(&self, q, lc);
-            for e in vec {
-                let dist = VectorStore::squared_distance_to_query(&self.vectors, e, q);
-                w.push(Reverse((OrderedFloat(dist), e)));
-            }
-
-            let Reverse((OrderedFloat(shortest_dist_sq), ep)) = *w.peek().unwrap();
-            
-        }
-
-        for lc  in 0..min(, v2) {
-            
-        }
-
-        todo!()
-    }
+    
 
     // greedy beam search
-    pub fn search_layer(&self, q: &[f32], lc: usize) -> Vec<usize> {
+    pub fn search_layer(&self, q: &[f32], lc: usize) -> BinaryHeap<(OrderedFloat<f32>, usize)> {
         let ep = self.entry_point.expect("ENTRY POINT ERROR");
         let sq_dist = VectorStore::squared_distance_to_query(&self.vectors, ep, q);
         // Candidates is Min Que
@@ -182,7 +159,25 @@ impl HNSW {
                 }
             }
         }
-        found_neighbours.into_iter().map(|(_, idx)| idx).collect()
+        found_neighbours
+        // found_neighbours.into_iter().map(|(_, idx)| idx).collect()
+    }
+
+    fn select_neighbors_simple(_q: &[f32], c: BinaryHeap<Reverse<(OrderedFloat<f32>, usize)>>, m: usize) -> Vec<usize> {
+        let mut candidates = c.into_vec();
+
+    
+        if candidates.len() <= m {
+            candidates.sort_unstable(); 
+            return candidates.into_iter().map(|Reverse((_, id))| id).collect();
+        }
+
+        candidates.select_nth_unstable(m);
+        candidates.truncate(m);
+
+        candidates
+            .into_iter()
+            .map(|Reverse((_, id))| id)
+            .collect()
     }
 }
-
