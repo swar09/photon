@@ -1,6 +1,10 @@
 use nano_rag::HNSW;
 use std::sync::{Arc, RwLock};
 use std::{result, thread};
+// use serde::*;
+use std::fs::File;
+ use std::io::Write;
+use rkyv::{deserialize, Deserialize, rancor::Error, Archive, Serialize};
 
 const EPSILON: f32 = 1e-5;
 
@@ -24,12 +28,18 @@ mod tests {
 }
 
 fn main() {
-    let hnsw = HNSW::new(100, 128);
+    let hnsw = HNSW::new(1000, 128);
+    // bytes 
+    let bytes = rkyv::to_bytes::<Error>(&hnsw).unwrap();
+
+    
+    
+    
     let shared_db = Arc::new(RwLock::new(hnsw));
     println!("Database initialized and locked globally.");
     println!("HNSW Library Compiles!");
     let db_writer = Arc::clone(&shared_db);
-
+    
     let insert_handle = thread::spawn(move || {
         let mut guard = db_writer.write().unwrap();
         println!("Writer: Acquired lock. Inserting data...");
@@ -50,21 +60,25 @@ fn main() {
     });
     
     let db_reader = Arc::clone(&shared_db);
-
+    
     let search_handle = thread::spawn(move || {
         let mut gaurd = db_reader.read().unwrap();
         println!("Reader: Acquired lock. Reading data...");
         // write  a search vector function in the hnsw here to test this out 
-
+        
         let query = vec![2.56; 128];
-
+        
         let results = gaurd.search(&query, 2, 1);
         println!("{:?}", results);
         println!("Reader: Finished. Releasing lock.");
     });
-
+    
     insert_handle.join().unwrap();
     search_handle.join().unwrap();
+    
+    let mut file = File::create("/home/eleven/Rust/projects-jan/photon/src/database.pho");
+        file.expect("REASON").write_all(&bytes);
+
 
 
 

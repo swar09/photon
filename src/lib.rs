@@ -1,16 +1,16 @@
 use ordered_float::OrderedFloat;
-#[warn(unused)]
-#[warn(dead_code)]
 use rayon::prelude::*;
-
+// use serde::{Serialize, Deserialize};
+use rkyv::*;
 use std::cmp::{Ordering, min};
-
 use rand::Rng;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
+// Expreimenting 
+use rkyv::{deserialize, Deserialize, rancor::Error, Archive, Serialize};
 
-// const N
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct VectorStore {
     data: Vec<f32>,
     dim: usize,
@@ -23,13 +23,13 @@ impl VectorStore {
             dim,
         }
     }
-
+    
     pub fn insert(&mut self, vec: &[f32]) -> usize {
         let id = self.data.len() / self.dim;
         self.data.extend_from_slice(vec);
         id
     }
-
+    
     fn squared_distance(&self, v1_id: usize, v2_id: usize) -> f32 {
         let vec1 = &self.data[v1_id * self.dim..(v1_id + 1) * self.dim];
         let vec2 = &self.data[v2_id * self.dim..(v2_id + 1) * self.dim];
@@ -39,7 +39,7 @@ impl VectorStore {
         let chunks2 = vec2.chunks_exact(8);
         let rem1 = chunks1.remainder();
         let rem2 = chunks2.remainder();
-
+        
         for (a, b) in chunks1.zip(chunks2) {
             let mut sub_sum = 0.0;
             for i in 0..8 {
@@ -48,14 +48,14 @@ impl VectorStore {
             }
             sum += sub_sum;
         }
-
+        
         for (a, b) in rem1.iter().zip(rem2.iter()) {
             let diff = a - b;
             sum += diff * diff;
         }
         sum
     }
-
+    
     pub fn squared_distance_to_query(&self, v1_id: usize, query: &[f32]) -> f32 {
         let vec1 = &self.data[v1_id * self.dim..(v1_id + 1) * self.dim];
         
@@ -64,7 +64,7 @@ impl VectorStore {
         let chunks2 = query.chunks_exact(8);
         let rem1 = chunks1.remainder();
         let rem2 = chunks2.remainder();
-
+        
         for (a, b) in chunks1.zip(chunks2) {
             let mut sub_sum = 0.0;
             for i in 0..8 {
@@ -73,7 +73,7 @@ impl VectorStore {
             }
             sum += sub_sum;
         }
-
+        
         for (a, b) in rem1.iter().zip(rem2.iter()) {
             let diff = a - b;
             sum += diff * diff;
@@ -82,10 +82,15 @@ impl VectorStore {
     }
 }
 
+
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+
 pub struct GraphLayers {
     base_layer: Vec<Vec<usize>>,
     upper_layers: Vec<HashMap<usize, Vec<usize>>>,
 }
+
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 
 struct Distibution {}
 
@@ -165,6 +170,7 @@ impl GraphLayers {
     }
 }
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct HNSW {
     pub layers: GraphLayers,
     pub vectors: VectorStore,
