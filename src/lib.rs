@@ -410,3 +410,57 @@ impl HNSW {
         candidates.into_iter().map(|Reverse((_, id))| id).collect()
     }
 }
+
+// Python Bindings
+use pyo3::prelude::*;
+
+#[pyclass]
+struct PyHNSW {
+    inner: HNSW,
+}
+
+#[pymethods]
+impl PyHNSW {
+    #[new]
+    fn new(max_elements: usize, dim: usize, m: usize, ef_construction: usize) -> Self {
+        let mut hnsw = HNSW::new(max_elements, dim);
+        hnsw.m = m;
+        hnsw.ef_construction = ef_construction;
+        PyHNSW { inner: hnsw }
+    }
+
+    fn insert(&mut self, vec: Vec<f32>, m: usize, m_max: usize, ef_construction: usize, m_l: f32) -> usize {
+        let id = self.inner.vectors.insert(&vec);
+        self.inner.insert(id, m, m_max, ef_construction, m_l);
+        id
+    }
+
+    fn search(&self, query: Vec<f32>, k: usize, ef_search: usize) -> Vec<(f32, usize)> {
+        self.inner.search(&query, k, ef_search)
+    }
+    
+    fn brute_force_search(&self, query: Vec<f32>, k: usize) -> Vec<(f32, usize)> {
+        self.inner.brute_force_search(&query, k)
+    }
+
+    fn save(&self, path: String) -> PyResult<()> {
+        let bytes = rkyv::to_bytes::<Error>(&self.inner)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        std::fs::write(path, bytes).map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(())
+    }
+
+    #[staticmethod]
+    fn load(path: String) -> PyResult<Self> {
+         let bytes = std::fs::read(&path).map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+         let inner = rkyv::from_bytes::<HNSW, Error>(&bytes)
+             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+         Ok(PyHNSW { inner })
+    }
+}
+
+#[pymodule]
+fn photon_db(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyHNSW>()?;
+    Ok(())
+}

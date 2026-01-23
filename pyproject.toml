@@ -1,0 +1,16 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "photon-db"
+version = "0.1.0"
+description = "High-performance Vector Database in Rust"
+authors = [{name = "Swarnit Ghule", email = "ghuleswarnit@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.7"
+classifier = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
