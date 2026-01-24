@@ -2,3 +2,6 @@
 .vscode
 src/database.pho
 venv
+src/hnsw_database_temp1.pho
+hnsw_database_temp.pho
+src/database.pho
