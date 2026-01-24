@@ -1,5 +1,7 @@
 use ordered_float::OrderedFloat;
 use rayon::prelude::*;
+ use std::fmt::Debug;
+ use std::fmt::Formatter;
 // use serde::{Serialize, Deserialize};
 use rkyv::*;
 use std::cmp::min;
@@ -8,9 +10,11 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 // Expreimenting 
 use rkyv::{Deserialize, rancor::Error, Archive, Serialize};
+// use rkyv::Archive;
 
 pub mod persistence;
 pub mod wrapper;
+
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct VectorStore {
@@ -91,7 +95,10 @@ pub struct GraphLayers {
     pub upper_layers: Vec<HashMap<usize, Vec<usize>>>,
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+impl std::fmt::Debug for ArchivedGraphLayers{
+    fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), std::fmt::Error> { todo!() }
+}
+// #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 
 struct Distibution {}
 
@@ -184,7 +191,7 @@ impl GraphLayers {
         }
     }
 }
-
+// #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 pub struct HNSW {
     pub layers: GraphLayers,

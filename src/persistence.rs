@@ -1,11 +1,11 @@
 use crate::HNSW;
 use memmap2::*;
-use pyo3::ffi::newfunc;
 use rkyv::rancor::Error;
-use std::fs::{self, exists};
+use std::fs::{self};
 use std::io;
 use std::path::Path;
 use std::{fs::File, path::PathBuf};
+use rkyv::Archive;
 
 #[derive(Debug)]
 pub struct PhotonDB {
@@ -14,32 +14,64 @@ pub struct PhotonDB {
     pub path: PathBuf,
 }
 
+// impl Debug for ArchivedGraphLayers{}
 impl PhotonDB {
     // fn new() -> Self {todo!()}
 
-    pub fn load_or_create(path: PathBuf, max_elements: usize, dim: usize) -> io::Result<PhotonDB> {
+    pub fn load_or_create(
+        path: PathBuf,
+        max_elements: usize,
+        dim: usize,
+    ) -> Result<PhotonDB, Box<dyn std::error::Error >> {
+        
+        // Result<(), Box<dyn std::error::Error>>
+
         let parent_dir = path.parent().unwrap_or(Path::new("."));
-        let p = parent_dir.join("hnsw_database_main.pho");
+        let p = parent_dir.join("hnsw_database.pho");
+
         if p.exists() {
-            // Print some text here for the user entertainment
-            // May be try to add loading screens
-
-            let file = File::open(&p).unwrap();
-
+            let file = File::open(&p)?;
             let mmap = unsafe { Mmap::map(&file)? };
+            // Just for testing 
+            if mmap.len() >= 5 {
+                println!("First 5 bytes: {:?}", &mmap[0..5]);
+            }
 
-            let bytes = &mmap[..];
+            let hnsw = rkyv::from_bytes::<HNSW, Error>(&mmap)?;
+            // let view = rkyv::access::<HNSW, Error>(&mmap)?;
+            // let view = rkyv::access::<, Error>(&mmap).unwrap();
+            let view = rkyv::access::<<HNSW as Archive>::Archived, Error>(&mmap).unwrap();
 
-            let hnsw = rkyv::from_bytes::<HNSW, Error>(&bytes).unwrap();
-            // Just load the bytes in the variable and desereialize it and pass forward
-            return Ok(PhotonDB { hnsw, dim, path: p });
+            println!("{:?}", view.layers);
+            println!("{:?}", view.entry_point);
+            println!("{:?}", view.vectors.dim);
+
         } else {
-            return Ok(PhotonDB {
-                hnsw: HNSW::new(max_elements, dim),
-                dim,
-                path: p,
-            });
+            // PhotonDB {
+            //     hnsw: HNSW::new(100, 4),
+            //     dim: 4
+            // }
         }
+
+        // if p.exists() {
+        //     // Print some text here for the user entertainment
+        //     // May be try to add loading screens
+
+        //     let mmap = unsafe { Mmap::map(&file)? };
+
+        //     let bytes = &mmap[..];
+
+        //     let hnsw = rkyv::from_bytes::<HNSW, Error>(&bytes).unwrap();
+        //     // Just load the bytes in the variable and desereialize it and pass forward
+        //     return Ok(PhotonDB { hnsw, dim, path: p });
+        // } else {
+        //     return Ok(PhotonDB {
+        //         hnsw: HNSW::new(max_elements, dim),
+        //         dim,
+        //         path: p,
+        //     });
+        // }
+        Ok(())
     }
 
     pub fn save(&self) -> io::Result<bool> {
@@ -49,35 +81,33 @@ impl PhotonDB {
         let parent_dir = db_path.parent().unwrap_or(Path::new("."));
         let temp_path = parent_dir.join("hnsw_database_temp.pho");
 
-        let mut file = File::create(&temp_path).expect("Failed to create temp db file ");
+        let file = File::create(&temp_path).expect("Failed to create temp db file ");
+        file.set_len(bytes.len() as u64);
         // file = File::open(&temp_path).unwrap();
 
         let mut mmap = unsafe { MmapMut::map_mut(&file)? };
 
         mmap[..].copy_from_slice(&bytes);
-        
+
         // let res = mmap.wri
-        
+
         mmap.flush()?;
 
-
-        let res = fs::rename(temp_path, &self.path).expect("FILE RENAME ERROR");
+        let _ = fs::rename(temp_path, &self.path).expect("FILE RENAME ERROR");
 
         // fs::write(&self.path, bytes).expect("Error in creating db file ");
-        return Ok((true));
+        return Ok(true);
     }
-    
+
     pub fn add(&mut self, vec: Vec<f32>) {
-         if vec.len() != self.hnsw.vectors.dim {
+        if vec.len() != self.hnsw.vectors.dim {
             panic!("Vector dimension mismatch");
         }
-        
-    
+
         let id = self.hnsw.vectors.insert(&vec);
 
-        
         let m = self.hnsw.m;
-        let m_max = m; 
+        let m_max = m;
         let ef_construction = self.hnsw.ef_construction;
         let m_l = 1.0 / (m as f32).ln();
 

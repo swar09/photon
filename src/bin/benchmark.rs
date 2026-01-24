@@ -5,7 +5,6 @@ use rayon::prelude::*;
 use std::time::{Duration, Instant};
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use serde::*;
 
 
 const DIM: usize = 32; 

@@ -1,6 +1,4 @@
 use photon::HNSW;
-use std::sync::{Arc, RwLock};
-use std::{result, thread};
 // use serde::*;
 // use photon::PhotonDB;
 
@@ -26,6 +24,6 @@ mod tests {
 }
 
 fn main() {
-    let mut hnsw = HNSW::new(10, 3);
+    let hnsw = HNSW::new(10, 3);
         
 }
