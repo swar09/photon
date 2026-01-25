@@ -1,11 +1,17 @@
+// As of now implementing the Ram only solution and i will implement complete disk zero copy persistance when completed
+// Os internals , how database works ?? watch some tuts .
+
 use crate::HNSW;
 use memmap2::*;
 use rkyv::rancor::Error;
+use rkyv::Archive;
 use std::fs::{self};
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
 use std::{fs::File, path::PathBuf};
-use rkyv::Archive;
+use std::io::Read;
+
+const db_name: &str= "main_hnsw_database.pho";
 
 #[derive(Debug)]
 pub struct PhotonDB {
@@ -14,147 +20,52 @@ pub struct PhotonDB {
     pub path: PathBuf,
 }
 
-// impl Debug for ArchivedGraphLayers{}
 impl PhotonDB {
-    // fn new() -> Self {todo!()}
+    fn save(&self) -> Result<bool, String>{
+        let mut file = File::create(&self.path).expect("Failed to create db file");
+        file = File::open(&self.path).unwrap();
+        let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&self.hnsw).unwrap();
+        file.write_all(&bytes).expect("Error in writing");
+        Ok(true)
 
-    pub fn load_or_create(
-        path: PathBuf,
-        max_elements: usize,
-        dim: usize,
-    ) -> Result<PhotonDB, Box<dyn std::error::Error >> {
-        
-        // Result<(), Box<dyn std::error::Error>>
+    }
 
-        let parent_dir = path.parent().unwrap_or(Path::new("."));
-        let p = parent_dir.join("hnsw_database.pho");
+    fn load(path: PathBuf, dim: usize) -> Result<PhotonDB, String> {
+        let dir_path = path.parent().unwrap();
+        let db_path = dir_path.join(db_name);
+        if db_path.exists() {
+            
+            let mut file = File::open(&db_path).unwrap();
+            // let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&player).unwrap();
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).expect("Failed to read file");
 
-        if p.exists() {
-            let file = File::open(&p)?;
-            let mmap = unsafe { Mmap::map(&file)? };
-            // Just for testing 
-            if mmap.len() >= 5 {
-                println!("First 5 bytes: {:?}", &mmap[0..5]);
-            }
+            let hnsw = rkyv::from_bytes::<HNSW, Error>(&bytes).unwrap();
 
-            let hnsw = rkyv::from_bytes::<HNSW, Error>(&mmap)?;
-            // let view = rkyv::access::<HNSW, Error>(&mmap)?;
-            // let view = rkyv::access::<, Error>(&mmap).unwrap();
-            let view = rkyv::access::<<HNSW as Archive>::Archived, Error>(&mmap).unwrap();
+            Ok(PhotonDB {
+                hnsw,
+                dim,
+                path: db_path,
+            })
+          
 
-            println!("{:?}", view.layers);
-            println!("{:?}", view.entry_point);
-            println!("{:?}", view.vectors.dim);
 
         } else {
-            // PhotonDB {
-            //     hnsw: HNSW::new(100, 4),
-            //     dim: 4
-            // }
+            // println!("Error: {:?}", db_path);
+            Err("Database Curpted".to_string())
         }
-
-        // if p.exists() {
-        //     // Print some text here for the user entertainment
-        //     // May be try to add loading screens
-
-        //     let mmap = unsafe { Mmap::map(&file)? };
-
-        //     let bytes = &mmap[..];
-
-        //     let hnsw = rkyv::from_bytes::<HNSW, Error>(&bytes).unwrap();
-        //     // Just load the bytes in the variable and desereialize it and pass forward
-        //     return Ok(PhotonDB { hnsw, dim, path: p });
-        // } else {
-        //     return Ok(PhotonDB {
-        //         hnsw: HNSW::new(max_elements, dim),
-        //         dim,
-        //         path: p,
-        //     });
-        // }
-        Ok(())
     }
 
-    pub fn save(&self) -> io::Result<bool> {
-        let bytes = rkyv::to_bytes::<Error>(&self.hnsw).unwrap();
-        // let  temp_path = self.path.join("hnsw_database_temp.pho"); // THis is creating a folder
-        let db_path = Path::new(&self.path);
-        let parent_dir = db_path.parent().unwrap_or(Path::new("."));
-        let temp_path = parent_dir.join("hnsw_database_temp.pho");
+    fn create(path: PathBuf, max_elements: usize, dim: usize) -> Result<PhotonDB, String> {
+        let dir_path = path.parent().unwrap();
+        let db_path = dir_path.join(db_name);
 
-        let file = File::create(&temp_path).expect("Failed to create temp db file ");
-        file.set_len(bytes.len() as u64);
-        // file = File::open(&temp_path).unwrap();
 
-        let mut mmap = unsafe { MmapMut::map_mut(&file)? };
-
-        mmap[..].copy_from_slice(&bytes);
-
-        // let res = mmap.wri
-
-        mmap.flush()?;
-
-        let _ = fs::rename(temp_path, &self.path).expect("FILE RENAME ERROR");
-
-        // fs::write(&self.path, bytes).expect("Error in creating db file ");
-        return Ok(true);
+        Ok(PhotonDB {
+            hnsw: HNSW::new(max_elements, dim),
+            dim,
+            path: db_path
+        })
+        
     }
-
-    pub fn add(&mut self, vec: Vec<f32>) {
-        if vec.len() != self.hnsw.vectors.dim {
-            panic!("Vector dimension mismatch");
-        }
-
-        let id = self.hnsw.vectors.insert(&vec);
-
-        let m = self.hnsw.m;
-        let m_max = m;
-        let ef_construction = self.hnsw.ef_construction;
-        let m_l = 1.0 / (m as f32).ln();
-
-        self.hnsw.insert(id, m, m_max, ef_construction, m_l);
-    }
-}
-
-// Log impl
-
-struct Transaction {
-    query: u8,
-}
-pub struct Log {
-    time: usize,
-    transactions: Transaction,
-    path: PathBuf, // self.path for log file
-}
-
-impl Log {
-    fn append(&self, T: Transaction) -> io::Result<bool> {
-        let mut file = File::create(&self.path).expect("Failed to create temp db file ");
-        file = File::open(&self.path).unwrap();
-
-        // fs::ap(&self.path, T).expect("Error in creating db file ");
-
-        // file dot append T
-        // Here i will get the log of all the transactions which happednon the vector db
-        // Insert delete add edge etc , not that search queries only modification and deletion etc
-
-        Ok(true)
-    }
-
-    fn read(path: PathBuf) {
-        // Read that file parse it
-        // And pass appropriate data such that
-        // other function can revert the things where went wrong
-        // Basically a backup
-    }
-}
-pub struct Buffer {
-    db: PhotonDB,
-    path: PathBuf,
-}
-
-impl Buffer {
-    // This will be a copy of the main data base and this will keep comiting the changes to main db
-    // all the current chANGES ARE OCCURUNG HERE in this file
-    // After some creteria we can commit the changes
-    fn commit(&self) {}
 }
