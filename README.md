@@ -80,21 +80,6 @@ db = photon_db.PyHNSW.load("my_index.pho")
 
 ## Benchmarks
 
-i incldued a `benchmark.py` script so you can stress test it yourself.
-
-**Synthetic Stress Test (No Data Required)**
-great if you just wanna check raw speed
-```bash
-# test with 100k random vectors
-python benchmark.py --synthetic 100000 --dim 128 --m 32
-```
-
-**Real Text Benchmark**
-indexes actual text files and checks recall
-```bash
-python benchmark.py --data /path/to/text/files --limit 5000 --save
-```
-
 **Latest Benchmark Output (SIFT10k)**
 ```text
     ╔══════════════════════════════════════════════════════════════╗
